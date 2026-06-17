@@ -1,0 +1,401 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Игра: Найди особый транспорт</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+            min-height: 100vh;
+        }
+        h1 {
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .subtitle {
+            color: #f0f0f0;
+            margin-bottom: 20px;
+            font-style: italic;
+            text-align: center;
+        }
+        .difficulty {
+            background: #e74c3c;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 10px;
+        }
+        #game-wrapper {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        #game-container {
+            position: relative;
+            width: 1000px;
+            height: 700px;
+            border: 5px solid #2c3e50;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+            background-color: #2c3e50;
+        }
+        #background {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .object {
+            position: absolute;
+            width: 80px;
+            height: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            mix-blend-mode: multiply;
+            user-select: none;
+            border: 3px solid transparent;
+            border-radius: 6px;
+            filter: drop-shadow(2px 2px 3px rgba(0,0,0,0.5));
+            opacity: 0.9;
+        }
+        .object:hover {
+            transform: scale(1.3);
+            filter: brightness(1.3) drop-shadow(4px 4px 8px rgba(0,0,0,0.6));
+            z-index: 100;
+            opacity: 1;
+            border-color: #f1c40f;
+        }
+        .object.found {
+            border: 4px solid #2ecc71;
+            box-shadow: 0 0 25px rgba(46, 204, 113, 0.9), inset 0 0 20px rgba(46, 204, 113, 0.5);
+            animation: foundPulse 0.6s ease-out;
+            filter: brightness(1.4) saturate(1.5) drop-shadow(0 0 12px rgba(46, 204, 113, 0.9));
+            pointer-events: none;
+            opacity: 1;
+        }
+        .object.found::after {
+            content: "✓";
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.4);
+            animation: checkmarkPop 0.5s ease-out;
+            border: 2px solid white;
+            z-index: 101;
+        }
+        @keyframes foundPulse {
+            0% { transform: scale(1); }
+            40% { transform: scale(1.4); }
+            70% { transform: scale(0.9); }
+            100% { transform: scale(1.15); }
+        }
+        @keyframes checkmarkPop {
+            0% { transform: scale(0) rotate(-45deg); }
+            60% { transform: scale(1.3) rotate(10deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+        #sidebar {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            min-width: 320px;
+            max-width: 350px;
+        }
+        #sidebar h3 {
+            margin-top: 0;
+            color: #2c3e50;
+            border-bottom: 3px solid #e74c3c;
+            padding-bottom: 12px;
+            font-size: 22px;
+        }
+        #progress {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: white;
+            font-weight: bold;
+        }
+        #progress-bar {
+            width: 100%;
+            height: 25px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 10px;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.3);
+        }
+        #progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #2ecc71, #27ae60);
+            width: 0%;
+            transition: width 0.6s ease;
+            box-shadow: 0 0 10px rgba(46, 204, 113, 0.6);
+        }
+        .task-item {
+            font-size: 16px;
+            margin: 10px 0;
+            padding: 10px 12px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s;
+            border: 2px solid #ecf0f1;
+            background: #f8f9fa;
+        }
+        .task-item.found {
+            background: linear-gradient(135deg, #d5f5e3, #abebc6);
+            border-color: #2ecc71;
+            color: #27ae60;
+            box-shadow: 0 3px 10px rgba(46, 204, 113, 0.3);
+        }
+        .task-item .icon {
+            font-size: 26px;
+        }
+        .task-item .name {
+            flex: 1;
+            font-weight: 500;
+        }
+        .task-item .status {
+            font-size: 22px;
+            font-weight: bold;
+        }
+        #reset-btn {
+            margin-top: 20px;
+            padding: 14px 25px;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 17px;
+            width: 100%;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 4px 10px rgba(52, 152, 219, 0.4);
+        }
+        #reset-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(52, 152, 219, 0.6);
+        }
+        #message {
+            margin-top: 15px;
+            font-weight: bold;
+            color: #2ecc71;
+            text-align: center;
+            min-height: 24px;
+            font-size: 16px;
+        }
+        #win-animation {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 50px;
+            border-radius: 20px;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.5);
+            text-align: center;
+            display: none;
+            z-index: 1000;
+            animation: winPop 0.6s ease-out;
+            max-width: 90%;
+        }
+        @keyframes winPop {
+            0% { transform: translate(-50%, -50%) scale(0) rotate(-10deg); }
+            70% { transform: translate(-50%, -50%) scale(1.1) rotate(3deg); }
+            100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+        }
+        #win-animation h2 {
+            color: #e74c3c;
+            font-size: 40px;
+            margin: 0 0 20px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        #win-animation p {
+            font-size: 20px;
+            color: #2c3e50;
+            margin: 15px 0;
+        }
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            z-index: 999;
+        }
+        .hint {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 10px;
+            margin: 15px 0;
+            border-radius: 5px;
+            font-size: 14px;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🚗 Найди особый транспорт 🚓</h1>
+    <p class="subtitle">Найди 5 специальных автомобилей среди сотен обычных!<span class="difficulty">🔴 СЛОЖНЫЙ УРОВЕНЬ</span></p>
+
+    <div id="game-wrapper">
+        <div id="game-container">
+            <img id="background" src="background.png" alt="Фон игры">
+            
+            <!-- Объекты спрятаны среди множества похожих машин -->
+            <img class="object" id="obj-firetruck" src="firetruck.png" style="top: 320px; left: 420px;" data-name="firetruck" alt="Пожарная машина">
+            <img class="object" id="obj-taxi" src="taxi.png" style="top: 480px; left: 680px;" data-name="taxi" alt="Жёлтое такси">
+            <img class="object" id="obj-police" src="police.png" style="top: 250px; left: 180px;" data-name="police" alt="Полицейская машина">
+            <img class="object" id="obj-truck" src="truck.png" style="top: 150px; left: 750px;" data-name="truck" alt="Зелёный грузовик">
+            <img class="object" id="obj-limo" src="limo.png" style="top: 550px; left: 320px;" data-name="limo" alt="Чёрный лимузин">
+        </div>
+
+        <div id="sidebar">
+            <h3> Цель игры:</h3>
+            <div class="hint">💡 Ищи среди сотен машин на парковке! Эти автомобили выделятся цветом и формой.</div>
+            
+            <div id="progress">
+                Найдено: <span id="found-count">0</span> из 5
+                <div id="progress-bar">
+                    <div id="progress-fill"></div>
+                </div>
+            </div>
+            
+            <div class="task-item" data-name="firetruck">
+                <span class="icon">🚒</span> 
+                <span class="name">Красная пожарная машина</span>
+                <span class="status">○</span>
+            </div>
+            <div class="task-item" data-name="taxi">
+                <span class="icon">🚕</span> 
+                <span class="name">Жёлтое такси</span>
+                <span class="status">○</span>
+            </div>
+            <div class="task-item" data-name="police">
+                <span class="icon">🚓</span> 
+                <span class="name">Сине-белая полиция</span>
+                <span class="status">○</span>
+            </div>
+            <div class="task-item" data-name="truck">
+                <span class="icon">🚚</span> 
+                <span class="name">Зелёный грузовик</span>
+                <span class="status">○</span>
+            </div>
+            <div class="task-item" data-name="limo">
+                <span class="icon">🚗</span> 
+                <span class="name">Чёрный лимузин</span>
+                <span class="status">○</span>
+            </div>
+            
+            <div id="message"></div>
+            <button id="reset-btn">🔄 Начать заново</button>
+        </div>
+    </div>
+
+    <div id="overlay"></div>
+    <div id="win-animation">
+        <h2>🎉 Поздравляем!</h2>
+        <p>Вы нашли все 5 специальных автомобилей!</p>
+        <p style="font-size: 45px; margin: 25px 0;">🏆🏆</p>
+        <p style="color: #e74c3c; font-weight: bold;">Отличная внимательность!</p>
+    </div>
+
+    <script>
+        const objects = document.querySelectorAll('.object');
+        const taskItems = document.querySelectorAll('.task-item');
+        const messageEl = document.getElementById('message');
+        const resetBtn = document.getElementById('reset-btn');
+        const foundCountEl = document.getElementById('found-count');
+        const progressFillEl = document.getElementById('progress-fill');
+        const winAnimation = document.getElementById('win-animation');
+        const overlay = document.getElementById('overlay');
+        let foundCount = 0;
+
+        function updateProgress() {
+            foundCount = document.querySelectorAll('.object.found').length;
+            foundCountEl.textContent = foundCount;
+            const percentage = (foundCount / objects.length) * 100;
+            progressFillEl.style.width = percentage + '%';
+        }
+
+        function checkWin() {
+            if (foundCount === objects.length) {
+                messageEl.textContent = "🎉 Все автомобили найдены!";
+                setTimeout(() => {
+                    winAnimation.style.display = 'block';
+                    overlay.style.display = 'block';
+                }, 600);
+            }
+        }
+
+        objects.forEach(obj => {
+            obj.addEventListener('click', function() {
+                if (!this.classList.contains('found')) {
+                    this.classList.add('found');
+                    
+                    const name = this.getAttribute('data-name');
+                    const task = document.querySelector(`.task-item[data-name="${name}"]`);
+                    if (task) {
+                        task.classList.add('found');
+                        task.querySelector('.status').textContent = '✓';
+                    }
+                    
+                    updateProgress();
+                    checkWin();
+                }
+            });
+        });
+
+        resetBtn.addEventListener('click', () => {
+            objects.forEach(obj => obj.classList.remove('found'));
+            taskItems.forEach(item => {
+                item.classList.remove('found');
+                item.querySelector('.status').textContent = '○';
+            });
+            messageEl.textContent = "";
+            foundCount = 0;
+            updateProgress();
+            winAnimation.style.display = 'none';
+            overlay.style.display = 'none';
+        });
+
+        overlay.addEventListener('click', () => {
+            winAnimation.style.display = 'none';
+            overlay.style.display = 'none';
+        });
+    </script>
+
+</body>
+</html>
